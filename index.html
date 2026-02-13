@@ -1,0 +1,1049 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>社労士 テキストアプリ</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@400;700&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --green:       #1e6b3c;
+    --green-mid:   #2a8a50;
+    --green-light: #3aaa64;
+    --green-pale:  #eaf5ee;
+    --amber:       #c87d0a;
+    --amber-pale:  #fef6e4;
+    --purple:      #6c3fc5;
+    --purple-pale: #f0ebfc;
+    --text:        #1a1a2e;
+    --muted:       #6b7a99;
+    --border:      #dde2ee;
+    --bg:          #f3f6f2;
+    --white:       #ffffff;
+    --shadow:      0 2px 12px rgba(20,50,30,0.10);
+    --shadow-lg:   0 8px 32px rgba(20,50,30,0.18);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Noto Sans JP', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  /* ===== HEADER ===== */
+  header {
+    background: var(--green);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 16px;
+    height: 52px;
+    flex-shrink: 0;
+    gap: 8px;
+  }
+  header h1 {
+    font-family: 'Noto Serif JP', serif;
+    font-size: 16px;
+    font-weight: 700;
+    color: #c8f0d4;
+    white-space: nowrap;
+  }
+  .header-add-btn {
+    background: rgba(255,255,255,0.15);
+    border: 1.5px solid rgba(255,255,255,0.3);
+    color: white;
+    border-radius: 10px;
+    padding: 7px 14px;
+    font-size: 13px;
+    font-family: 'Noto Sans JP', sans-serif;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+  .header-add-btn:hover { background: rgba(255,255,255,0.25); }
+  #file-input { display: none; }
+
+  /* ===== HOME SCREEN ===== */
+  #home-screen {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+    padding: 16px;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .upload-box {
+    border: 2.5px dashed var(--green-mid);
+    border-radius: 16px;
+    background: white;
+    width: 100%;
+    max-width: 440px;
+    padding: 28px 24px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .upload-box:hover, .upload-box.drag-over {
+    border-color: var(--amber);
+    background: var(--amber-pale);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg);
+  }
+  .upload-icon { font-size: 48px; margin-bottom: 12px; }
+  .upload-box h2 {
+    font-family: 'Noto Serif JP', serif;
+    font-size: 17px;
+    color: var(--green);
+    margin-bottom: 6px;
+  }
+  .upload-box p { color: var(--muted); font-size: 13px; line-height: 1.6; }
+
+  /* 書籍リスト */
+  .book-list { width: 100%; max-width: 440px; display: flex; flex-direction: column; gap: 12px; }
+  .subject-group {}
+  .subject-header {
+    display: flex; align-items: center; gap: 8px;
+    padding: 6px 4px; cursor: pointer; user-select: none;
+  }
+  .subject-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .subject-name { font-size: 12px; font-weight: 700; color: var(--green); letter-spacing: 0.05em; flex: 1; }
+  .subject-count { font-size: 11px; color: var(--muted); background: var(--border); border-radius: 10px; padding: 1px 7px; }
+  .subject-chevron { font-size: 12px; color: var(--muted); transition: transform 0.2s; }
+  .subject-group.collapsed .subject-chevron { transform: rotate(-90deg); }
+  .subject-books { display: flex; flex-direction: column; gap: 6px; padding-left: 16px; }
+  .subject-group.collapsed .subject-books { display: none; }
+
+  .book-item {
+    background: white;
+    border-radius: 10px;
+    padding: 12px 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    cursor: pointer;
+    box-shadow: var(--shadow);
+    transition: all 0.15s;
+    border: 1.5px solid transparent;
+  }
+  .book-item:hover { border-color: var(--green-light); transform: translateX(2px); }
+  .book-item-icon { font-size: 24px; }
+  .book-item-info { flex: 1; min-width: 0; }
+  .book-item-title { font-weight: 700; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .book-item-meta { font-size: 11px; color: var(--muted); margin-top: 2px; }
+  .book-item-stats { display: flex; gap: 6px; margin-top: 4px; }
+  .stat-badge { font-size: 10px; font-weight: 700; padding: 1px 6px; border-radius: 4px; }
+  .stat-badge.read    { background: var(--green-pale); color: var(--green); }
+  .stat-badge.marker  { background: var(--amber-pale); color: var(--amber); }
+  .stat-badge.memo    { background: var(--purple-pale); color: var(--purple); }
+  .book-item-del {
+    background: none; border: none; cursor: pointer;
+    color: var(--muted); font-size: 16px; padding: 4px; transition: color 0.15s;
+  }
+  .book-item-del:hover { color: #c0392b; }
+
+  /* ===== VIEWER SCREEN ===== */
+  #viewer-screen { display: none; flex: 1; flex-direction: column; overflow: hidden; }
+  #viewer-screen.active { display: flex; }
+
+  .viewer-toolbar {
+    background: var(--green);
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 12px; height: 52px; flex-shrink: 0; gap: 8px; overflow: hidden;
+  }
+  .toolbar-left { display: flex; align-items: center; gap: 8px; min-width: 0; }
+  .toolbar-title {
+    color: #c8f0d4; font-family: 'Noto Serif JP', serif;
+    font-size: 14px; font-weight: 700;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 180px;
+  }
+  .btn-icon {
+    background: rgba(255,255,255,0.12);
+    border: 1px solid rgba(255,255,255,0.2);
+    color: white; border-radius: 8px;
+    width: 36px; height: 36px;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; font-size: 16px; transition: all 0.15s; flex-shrink: 0;
+  }
+  .btn-icon:hover { background: rgba(255,255,255,0.22); }
+
+  /* PDF エリア */
+  .viewer-body { flex: 1; display: flex; flex-direction: column; overflow: hidden; position: relative; }
+  #canvas-container {
+    flex: 1; overflow: auto;
+    display: flex; align-items: flex-start; justify-content: center;
+    background: #555; padding: 12px;
+    -webkit-overflow-scrolling: touch;
+  }
+  #pdf-canvas { display: block; box-shadow: var(--shadow-lg); max-width: 100%; }
+
+  .status-overlay {
+    position: absolute; top: 18px; right: 14px;
+    display: flex; flex-direction: column; gap: 6px;
+    pointer-events: none; z-index: 10;
+  }
+  .status-badge-big {
+    font-size: 18px; width: 38px; height: 38px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center; box-shadow: var(--shadow);
+  }
+  .status-badge-big.read   { background: var(--green); color: white; }
+  .status-badge-big.marker { background: var(--amber); color: white; }
+
+  .page-indicator {
+    position: absolute; top: 10px; left: 50%; transform: translateX(-50%);
+    background: rgba(20,50,30,0.72); color: white; border-radius: 20px;
+    padding: 4px 14px; font-size: 13px; font-weight: 700;
+    pointer-events: none; backdrop-filter: blur(4px);
+  }
+
+  #loading-overlay {
+    position: absolute; inset: 0;
+    background: rgba(40,60,40,0.85);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 20; flex-direction: column; gap: 12px;
+  }
+  .spinner {
+    width: 36px; height: 36px;
+    border: 3px solid rgba(255,255,255,0.2);
+    border-top-color: #8ee8a8; border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ズームコントロール */
+  .zoom-controls {
+    position: absolute; bottom: 16px; right: 12px;
+    display: flex; flex-direction: row; align-items: center;
+    gap: 6px; z-index: 10;
+    background: rgba(255,255,255,0.92); border-radius: 24px; padding: 6px 10px;
+    box-shadow: var(--shadow-lg); border: 1px solid rgba(0,0,0,0.08);
+    transition: opacity 0.4s, transform 0.4s;
+  }
+  .zoom-controls.hidden { opacity: 0; transform: translateY(10px); pointer-events: none; }
+  .zoom-btn {
+    background: var(--green); border: none; border-radius: 50%;
+    width: 40px; height: 40px; font-size: 22px; font-weight: 700;
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+    transition: all 0.15s; color: white; flex-shrink: 0;
+  }
+  .zoom-btn:hover { background: var(--green-light); }
+  .zoom-level {
+    font-size: 12px; font-weight: 700; text-align: center;
+    padding: 0 4px; color: var(--green); min-width: 40px;
+  }
+
+  /* ===== BOTTOM BAR ===== */
+  .bottom-bar {
+    background: white; border-top: 1px solid var(--border);
+    padding: 8px 12px 10px; flex-shrink: 0;
+    box-shadow: 0 -2px 10px rgba(0,0,0,0.06);
+  }
+  .nav-row {
+    display: flex; align-items: center; justify-content: center;
+    gap: 12px; margin-bottom: 8px;
+  }
+  .nav-btn {
+    background: var(--green); color: white; border: none;
+    border-radius: 10px; width: 44px; height: 44px; font-size: 20px;
+    cursor: pointer; transition: all 0.15s;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .nav-btn:hover:not(:disabled) { background: var(--green-light); }
+  .nav-btn:disabled { background: var(--border); color: var(--muted); cursor: not-allowed; }
+  .page-input-wrap {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 14px; font-weight: 700;
+  }
+  .page-input-wrap span { color: var(--muted); font-weight: 400; }
+  #page-num-input {
+    width: 50px; text-align: center;
+    border: 1.5px solid var(--border); border-radius: 8px;
+    padding: 6px 4px; font-size: 14px; font-weight: 700;
+    font-family: inherit; outline: none; transition: border-color 0.15s;
+  }
+  #page-num-input:focus { border-color: var(--green); }
+
+  .action-row {
+    display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  }
+  .action-btn {
+    flex: 1; border: none; border-radius: 10px; padding: 10px 8px;
+    font-size: 13px; font-weight: 700; font-family: 'Noto Sans JP', sans-serif;
+    cursor: pointer; transition: all 0.15s;
+    display: flex; flex-direction: column; align-items: center; gap: 2px;
+  }
+  .action-btn .btn-label { font-size: 11px; opacity: 0.8; }
+  .btn-read   { background: #f0f6f2; color: var(--text); }
+  .btn-read.active   { background: var(--green-pale); color: var(--green); }
+  .btn-marker { background: #f0f6f2; color: var(--text); }
+  .btn-marker.active { background: var(--amber-pale); color: var(--amber); }
+  .btn-memo   { background: #f0f6f2; color: var(--text); }
+  .btn-memo.has-memo { background: var(--purple-pale); color: var(--purple); }
+  .btn-list   { background: var(--green); color: white; }
+
+  /* ===== SIDEBAR ===== */
+  .sidebar-overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,0.4); z-index: 100;
+  }
+  .sidebar-overlay.open { display: block; }
+  .sidebar {
+    position: fixed; top: 0; right: -100%;
+    width: min(360px, 100vw); height: 100%;
+    background: white; box-shadow: var(--shadow-lg);
+    z-index: 101; transition: right 0.28s cubic-bezier(0.4,0,0.2,1);
+    display: flex; flex-direction: column;
+  }
+  .sidebar.open { right: 0; }
+  .sidebar-header {
+    background: var(--green); color: white;
+    padding: 16px; display: flex; align-items: center; justify-content: space-between;
+  }
+  .sidebar-header h3 { font-family: 'Noto Serif JP', serif; font-size: 16px; color: #c8f0d4; }
+  .sidebar-close { background: none; border: none; color: white; font-size: 22px; cursor: pointer; }
+  .sidebar-stats {
+    padding: 10px 14px; background: var(--bg);
+    display: flex; gap: 10px; border-bottom: 1px solid var(--border);
+  }
+  .stat-box {
+    flex: 1; text-align: center; background: white;
+    border-radius: 8px; padding: 8px; box-shadow: var(--shadow);
+  }
+  .stat-box .stat-num { font-size: 20px; font-weight: 900; }
+  .stat-box .stat-lbl { font-size: 10px; color: var(--muted); }
+  .stat-box.r { color: var(--green); }
+  .stat-box.m { color: var(--amber); }
+  .stat-box.n { color: var(--purple); }
+  .sidebar-tabs { display: flex; border-bottom: 1px solid var(--border); }
+  .sidebar-tab {
+    flex: 1; padding: 10px 0; border: none; background: none;
+    font-family: 'Noto Sans JP', sans-serif; font-size: 11px; font-weight: 700;
+    cursor: pointer; color: var(--muted); border-bottom: 2.5px solid transparent; transition: all 0.15s;
+  }
+  .sidebar-tab.active { color: var(--green); border-bottom-color: var(--green); }
+  .sidebar-list {
+    flex: 1; overflow-y: auto; padding: 8px;
+    display: flex; flex-direction: column; gap: 6px;
+  }
+  .sidebar-empty {
+    text-align: center; color: var(--muted); padding: 40px 16px; font-size: 13px; line-height: 1.8;
+  }
+  .sidebar-item {
+    background: var(--bg); border-radius: 10px; padding: 10px 12px;
+    cursor: pointer; display: flex; align-items: center; gap: 10px;
+    transition: all 0.15s; border: 1.5px solid transparent;
+  }
+  .sidebar-item:hover { border-color: var(--green-light); background: white; }
+  .sidebar-item-badge {
+    font-size: 16px; width: 34px; height: 34px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  }
+  .sidebar-item-badge.read   { background: var(--green-pale); color: var(--green); }
+  .sidebar-item-badge.marker { background: var(--amber-pale); color: var(--amber); }
+  .sidebar-item-badge.memo   { background: var(--purple-pale); color: var(--purple); }
+  .sidebar-item-info { flex: 1; min-width: 0; }
+  .sidebar-item-page { font-weight: 700; font-size: 13px; }
+  .sidebar-item-sub {
+    font-size: 11px; color: var(--muted);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 2px;
+  }
+  .sidebar-item-arr { color: var(--muted); font-size: 16px; }
+
+  /* ===== MODALS ===== */
+  .modal-overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,0.4); z-index: 200;
+    align-items: center; justify-content: center; padding: 16px;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal {
+    background: white; border-radius: 16px;
+    width: 100%; max-width: 400px;
+    box-shadow: var(--shadow-lg); animation: modal-in 0.2s ease;
+  }
+  @keyframes modal-in {
+    from { opacity:0; transform:scale(0.95) translateY(10px); }
+    to   { opacity:1; transform:scale(1) translateY(0); }
+  }
+  .modal-header {
+    padding: 16px 20px 12px; border-bottom: 1px solid var(--border);
+    font-family: 'Noto Serif JP', serif; font-size: 16px; font-weight: 700; color: var(--green);
+  }
+  .modal-body { padding: 16px 20px; }
+  .modal-footer { padding: 12px 20px 16px; display: flex; justify-content: flex-end; gap: 8px; }
+  .btn-cancel {
+    background: var(--bg); border: 1.5px solid var(--border); color: var(--text);
+    border-radius: 8px; padding: 8px 20px;
+    font-family: 'Noto Sans JP', sans-serif; font-size: 14px; cursor: pointer;
+  }
+  .btn-save {
+    background: var(--green); color: white; border: none;
+    border-radius: 8px; padding: 8px 24px;
+    font-family: 'Noto Sans JP', sans-serif; font-size: 14px; font-weight: 700; cursor: pointer;
+  }
+  .memo-textarea {
+    width: 100%; height: 130px;
+    border: 1.5px solid var(--border); border-radius: 10px;
+    padding: 10px 12px; font-family: 'Noto Sans JP', sans-serif;
+    font-size: 14px; line-height: 1.6; resize: none; outline: none; transition: border-color 0.15s;
+  }
+  .memo-textarea:focus { border-color: var(--green); }
+
+  /* PDF追加ダイアログ */
+  .modal-field { margin-bottom: 12px; }
+  .modal-field label {
+    display: block; font-size: 12px; font-weight: 700;
+    color: var(--muted); margin-bottom: 6px; letter-spacing: 0.04em;
+  }
+  .modal-input {
+    width: 100%; border: 1.5px solid var(--border); border-radius: 10px;
+    padding: 10px 12px; font-family: 'Noto Sans JP', sans-serif;
+    font-size: 14px; outline: none; transition: border-color 0.15s;
+  }
+  .modal-input:focus { border-color: var(--green); }
+  .subject-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+  .subject-chip {
+    padding: 5px 12px; border-radius: 20px;
+    border: 1.5px solid var(--border); background: white;
+    font-size: 12px; font-family: 'Noto Sans JP', sans-serif;
+    font-weight: 700; cursor: pointer; transition: all 0.15s; color: var(--text);
+  }
+  .subject-chip:hover { border-color: var(--green); background: var(--green-pale); }
+  .subject-chip.selected { background: var(--green); color: white; border-color: var(--green); }
+  .subject-divider { font-size: 11px; color: var(--muted); margin: 4px 0; }
+
+  /* トースト */
+  .toast {
+    position: fixed; bottom: 80px; left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: rgba(20,50,30,0.85); color: white;
+    padding: 8px 20px; border-radius: 20px; font-size: 13px; font-weight: 700;
+    opacity: 0; pointer-events: none; transition: all 0.3s; z-index: 300;
+    backdrop-filter: blur(4px); white-space: nowrap;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+</style>
+</head>
+<body>
+
+<!-- ヘッダー -->
+<header>
+  <h1>📗 社労士 テキスト</h1>
+  <button class="header-add-btn" onclick="document.getElementById('file-input').click()">＋ PDF追加</button>
+  <input type="file" id="file-input" accept="application/pdf">
+</header>
+
+<!-- ホーム画面 -->
+<div id="home-screen">
+  <div class="upload-box" id="drop-zone">
+    <div class="upload-icon">📗</div>
+    <h2>テキストPDFをここにドロップ</h2>
+    <p>またはタップして選択<br>社労士テキスト・参考書のPDFを読み込めます</p>
+  </div>
+  <div class="book-list" id="book-list"></div>
+</div>
+
+<!-- PDF追加ダイアログ -->
+<div class="modal-overlay" id="add-modal">
+  <div class="modal">
+    <div class="modal-header">📗 テキストを追加</div>
+    <div class="modal-body">
+      <div class="modal-field">
+        <label>タイトル</label>
+        <input type="text" class="modal-input" id="add-title" placeholder="例：基本書 令和6年度版">
+      </div>
+      <div class="modal-field">
+        <label>科目</label>
+        <div class="subject-chips" id="subject-chips"></div>
+        <div class="subject-divider">または新しい科目を入力</div>
+        <input type="text" class="modal-input" id="add-custom-subject" placeholder="科目名を入力…" style="margin-top:4px;">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="closeAddModal()">キャンセル</button>
+      <button class="btn-save" onclick="confirmAdd()">追加</button>
+    </div>
+  </div>
+</div>
+
+<!-- ビューワー -->
+<div id="viewer-screen">
+  <div class="viewer-toolbar">
+    <div class="toolbar-left">
+      <button class="btn-icon" onclick="closeViewer()">←</button>
+      <span class="toolbar-title" id="toolbar-title">テキスト</span>
+    </div>
+    <button class="btn-icon" onclick="openSidebar()">📋</button>
+  </div>
+  <div class="viewer-body">
+    <div id="canvas-container">
+      <canvas id="pdf-canvas"></canvas>
+      <div class="status-overlay" id="status-overlay"></div>
+      <div class="page-indicator" id="page-indicator">1 / 1</div>
+      <div id="loading-overlay">
+        <div class="spinner"></div>
+        <span style="color:white;font-size:13px;">読み込み中…</span>
+      </div>
+      <div class="zoom-controls hidden">
+        <button class="zoom-btn" onclick="changeZoom(-0.25)">－</button>
+        <div class="zoom-level" id="zoom-level">100%</div>
+        <button class="zoom-btn" onclick="changeZoom(0.25)">＋</button>
+        <button class="zoom-btn" onclick="resetZoom()" style="font-size:16px;">⊙</button>
+      </div>
+    </div>
+    <div class="bottom-bar">
+      <div class="nav-row">
+        <button class="nav-btn" id="prev-btn" onclick="goPage(-1)">◀</button>
+        <div class="page-input-wrap">
+          <input type="number" id="page-num-input" min="1" value="1">
+          <span>/ <span id="total-pages">1</span></span>
+        </div>
+        <button class="nav-btn" id="next-btn" onclick="goPage(1)">▶</button>
+      </div>
+      <div class="action-row">
+        <button class="action-btn btn-read" id="btn-read" onclick="toggleRead()">
+          <span id="read-icon">○</span>
+          <span class="btn-label" id="read-lbl">未読</span>
+        </button>
+        <button class="action-btn btn-marker" id="btn-marker" onclick="toggleMarker()">
+          <span id="marker-icon">🖊</span>
+          <span class="btn-label" id="marker-lbl">マーカー</span>
+        </button>
+        <button class="action-btn btn-memo" id="btn-memo" onclick="openMemo()">
+          <span>📝</span>
+          <span class="btn-label" id="memo-lbl">メモ</span>
+        </button>
+        <button class="action-btn btn-list" onclick="openSidebar()">
+          <span>📋</span>
+          <span class="btn-label">一覧</span>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- サイドバー -->
+<div class="sidebar-overlay" id="sidebar-overlay" onclick="closeSidebar()"></div>
+<div class="sidebar" id="sidebar">
+  <div class="sidebar-header">
+    <h3>📋 ページ一覧</h3>
+    <button class="sidebar-close" onclick="closeSidebar()">✕</button>
+  </div>
+  <div class="sidebar-stats" id="sidebar-stats"></div>
+  <div class="sidebar-tabs">
+    <button class="sidebar-tab active" data-tab="marker" onclick="switchTab('marker')">🖊 重要</button>
+    <button class="sidebar-tab" data-tab="memo"   onclick="switchTab('memo')">📝 メモ</button>
+    <button class="sidebar-tab" data-tab="read"   onclick="switchTab('read')">✔ 読了</button>
+    <button class="sidebar-tab" data-tab="all"    onclick="switchTab('all')">すべて</button>
+  </div>
+  <div class="sidebar-list" id="sidebar-list"></div>
+</div>
+
+<!-- メモダイアログ -->
+<div class="modal-overlay" id="memo-modal">
+  <div class="modal">
+    <div class="modal-header" id="memo-modal-title">メモ</div>
+    <div class="modal-body">
+      <textarea class="memo-textarea" id="memo-textarea" placeholder="このページのメモを入力…"></textarea>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="closeMemo()">キャンセル</button>
+      <button class="btn-save" onclick="saveMemo()">保存</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ===== PDF.js ワーカー初期化 =====
+let workerReadyResolve;
+const workerReady = new Promise(resolve => { workerReadyResolve = resolve; });
+(async function() {
+  try {
+    const res = await fetch('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js');
+    const js  = await res.text();
+    pdfjsLib.GlobalWorkerOptions.workerSrc = URL.createObjectURL(new Blob([js], { type: 'text/javascript' }));
+  } catch(e) {
+    const _w = console.warn.bind(console);
+    console.warn = (...a) => { if (typeof a[0]==='string' && a[0].includes('fake worker')) return; _w(...a); };
+  }
+  workerReadyResolve();
+})();
+
+// ===== 定数 =====
+const STORAGE_KEY = 'sharoshi_text_v3'; // v3: PDFはIndexedDB分離
+const PRESET_SUBJECTS = [
+  '労働基準法','労働安全衛生法','労災保険法','雇用保険法','労働保険徴収法',
+  '健康保険法','厚生年金保険法','国民年金法','労務管理・一般常識','社会保険・一般常識',
+];
+const SUBJECT_COLORS = [
+  '#e74c3c','#e67e22','#f1c40f','#2ecc71','#1abc9c',
+  '#3498db','#9b59b6','#e91e96','#607d8b','#795548',
+];
+
+// ===== IndexedDB（PDF保存用・容量制限なし） =====
+let db = null;
+function openDB() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open('sharoshi_text_pdf_db', 1);
+    req.onupgradeneeded = e => { e.target.result.createObjectStore('pdfs', { keyPath: 'id' }); };
+    req.onsuccess = e => { db = e.target.result; resolve(db); };
+    req.onerror   = e => reject(e);
+  });
+}
+async function savePdf(bookId, arrayBuffer) {
+  const d = db || await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = d.transaction('pdfs', 'readwrite');
+    tx.objectStore('pdfs').put({ id: bookId, data: arrayBuffer });
+    tx.oncomplete = resolve; tx.onerror = reject;
+  });
+}
+async function loadPdf(bookId) {
+  const d = db || await openDB();
+  return new Promise((resolve, reject) => {
+    const req = d.transaction('pdfs').objectStore('pdfs').get(bookId);
+    req.onsuccess = e => resolve(e.target.result ? e.target.result.data : null);
+    req.onerror = reject;
+  });
+}
+async function deletePdf(bookId) {
+  const d = db || await openDB();
+  return new Promise(resolve => {
+    const tx = d.transaction('pdfs', 'readwrite');
+    tx.objectStore('pdfs').delete(bookId);
+    tx.oncomplete = resolve;
+  });
+}
+
+// ===== 状態管理（PDFデータ除く） =====
+let state = { books: [], records: {} }; // books に dataUrl は含まない
+let viewer = { bookId: null, currentPage: 0, pdfDoc: null, zoom: 1.0, renderTask: null };
+let sidebarTab = 'marker';
+
+function saveState() {
+  try {
+    const toSave = {
+      books: state.books.map(b => ({ id: b.id, title: b.title, subject: b.subject, totalPages: b.totalPages, lastPage: b.lastPage })),
+      records: state.records
+    };
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(toSave));
+  } catch(e) { console.error('saveState error:', e); }
+}
+function loadState() { try { const s = localStorage.getItem(STORAGE_KEY); if (s) state = JSON.parse(s); } catch(e) {} }
+
+function getRecord(bookId, pageIdx) {
+  const key = `${bookId}_${pageIdx}`;
+  if (!state.records[key]) state.records[key] = { read: false, marker: false, memo: '' };
+  return state.records[key];
+}
+function setRecord(bookId, pageIdx, updates) {
+  const key = `${bookId}_${pageIdx}`;
+  if (!state.records[key]) state.records[key] = { read: false, marker: false, memo: '' };
+  Object.assign(state.records[key], updates);
+  saveState();
+}
+
+function getSubjectColor(subject) {
+  const all = [...new Set([...PRESET_SUBJECTS, ...state.books.map(b => b.subject).filter(Boolean)])];
+  return SUBJECT_COLORS[all.indexOf(subject) % SUBJECT_COLORS.length] || '#607d8b';
+}
+
+// ===== ファイル読み込み =====
+document.getElementById('file-input').addEventListener('change', e => {
+  const f = e.target.files[0]; if (f) handleFile(f); e.target.value = '';
+});
+const dropZone = document.getElementById('drop-zone');
+dropZone.addEventListener('click', () => document.getElementById('file-input').click());
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+dropZone.addEventListener('drop', e => {
+  e.preventDefault(); dropZone.classList.remove('drag-over');
+  const f = e.dataTransfer.files[0];
+  if (f && f.type === 'application/pdf') handleFile(f);
+});
+
+let pendingFile = null;
+async function handleFile(file) {
+  showToast('PDFを読み込んでいます…');
+  await workerReady;
+  try {
+    const arrayBuffer = await file.arrayBuffer();
+    const pdf = await pdfjsLib.getDocument({ data: arrayBuffer.slice(0) }).promise;
+    pendingFile = { arrayBuffer, totalPages: pdf.numPages, defaultTitle: file.name.replace(/\.pdf$/i, '') };
+    openAddModal(pendingFile.defaultTitle);
+  } catch(err) {
+    showToast('PDFの読み込みに失敗しました');
+    console.error(err);
+  }
+}
+
+function openAddModal(defaultTitle) {
+  document.getElementById('add-title').value = defaultTitle;
+  document.getElementById('add-custom-subject').value = '';
+  const existing = [...new Set([
+    ...PRESET_SUBJECTS,
+    ...state.books.map(b => b.subject).filter(s => s && !PRESET_SUBJECTS.includes(s))
+  ])];
+  document.getElementById('subject-chips').innerHTML = existing.map(s =>
+    `<button class="subject-chip" onclick="selectChip(this,'${escHtml(s)}')">${escHtml(s)}</button>`
+  ).join('');
+  document.getElementById('add-modal').classList.add('open');
+  setTimeout(() => document.getElementById('add-title').focus(), 100);
+}
+function selectChip(el, subject) {
+  document.querySelectorAll('.subject-chip').forEach(c => c.classList.remove('selected'));
+  el.classList.add('selected');
+  document.getElementById('add-custom-subject').value = '';
+}
+function closeAddModal() {
+  document.getElementById('add-modal').classList.remove('open');
+  pendingFile = null;
+}
+async function confirmAdd() {
+  if (!pendingFile) return;
+  const title = document.getElementById('add-title').value.trim();
+  if (!title) { document.getElementById('add-title').focus(); return; }
+  const custom  = document.getElementById('add-custom-subject').value.trim();
+  const chip    = document.querySelector('.subject-chip.selected');
+  const subject = custom || (chip ? chip.textContent : '未分類');
+  const bookId  = Date.now().toString();
+  // PDFをIndexedDBに保存
+  await savePdf(bookId, pendingFile.arrayBuffer);
+  // メタデータのみstateに保存
+  state.books.unshift({ id: bookId, title, subject, totalPages: pendingFile.totalPages, lastPage: 0 });
+  saveState();
+  closeAddModal();
+  renderBookList();
+  showToast(`「${title}」を追加しました（${pendingFile.totalPages}ページ）`);
+  openBook(bookId);
+}
+
+// ===== 書籍リスト =====
+function getBookStats(bookId, totalPages) {
+  let read = 0, marker = 0, memo = 0;
+  for (let i = 0; i < totalPages; i++) {
+    const r = state.records[`${bookId}_${i}`];
+    if (!r) continue;
+    if (r.read) read++;
+    if (r.marker) marker++;
+    if (r.memo && r.memo.trim()) memo++;
+  }
+  return { read, marker, memo };
+}
+
+function renderBookList() {
+  const container = document.getElementById('book-list');
+  if (state.books.length === 0) { container.innerHTML = ''; return; }
+  const groups = {};
+  state.books.forEach(b => {
+    const s = b.subject || '未分類';
+    if (!groups[s]) groups[s] = [];
+    groups[s].push(b);
+  });
+  container.innerHTML = Object.entries(groups).map(([subj, books]) => {
+    const color = getSubjectColor(subj);
+    return `
+      <div class="subject-group" id="grp-${escHtml(subj)}">
+        <div class="subject-header" onclick="toggleGroup('${escHtml(subj)}')">
+          <span class="subject-dot" style="background:${color}"></span>
+          <span class="subject-name">${escHtml(subj)}</span>
+          <span class="subject-count">${books.length}</span>
+          <span class="subject-chevron">▾</span>
+        </div>
+        <div class="subject-books">
+          ${books.map(b => renderBookItem(b)).join('')}
+        </div>
+      </div>`;
+  }).join('');
+}
+function toggleGroup(subj) {
+  const g = document.getElementById(`grp-${subj}`);
+  if (g) g.classList.toggle('collapsed');
+}
+function renderBookItem(book) {
+  const s = getBookStats(book.id, book.totalPages);
+  const pct = book.totalPages > 0 ? Math.round((s.read / book.totalPages) * 100) : 0;
+  return `
+    <div class="book-item" onclick="openBook('${book.id}')">
+      <div class="book-item-icon">📗</div>
+      <div class="book-item-info">
+        <div class="book-item-title">${escHtml(book.title)}</div>
+        <div class="book-item-meta">${book.totalPages}p ／ 読了 ${pct}% ／ 最終: ${book.lastPage + 1}p</div>
+        <div class="book-item-stats">
+          ${s.read   > 0 ? `<span class="stat-badge read">✔ ${s.read}</span>` : ''}
+          ${s.marker > 0 ? `<span class="stat-badge marker">🖊 ${s.marker}</span>` : ''}
+          ${s.memo   > 0 ? `<span class="stat-badge memo">📝 ${s.memo}</span>` : ''}
+        </div>
+      </div>
+      <button class="book-item-del" onclick="event.stopPropagation();deleteBook('${book.id}')">🗑</button>
+    </div>`;
+}
+function deleteBook(bookId) {
+  if (!confirm('このテキストを削除しますか？\n学習記録もすべて削除されます。')) return;
+  state.books = state.books.filter(b => b.id !== bookId);
+  Object.keys(state.records).forEach(k => { if (k.startsWith(bookId + '_')) delete state.records[k]; });
+  deletePdf(bookId); // IndexedDBからも削除
+  saveState(); renderBookList(); showToast('削除しました');
+}
+
+// ===== ビューワー =====
+async function openBook(bookId) {
+  const book = state.books.find(b => b.id === bookId);
+  if (!book) return;
+  viewer.bookId = bookId;
+  viewer.currentPage = book.lastPage || 0;
+  viewer.zoom = 1.0;
+  document.getElementById('home-screen').style.display = 'none';
+  document.getElementById('viewer-screen').classList.add('active');
+  document.getElementById('toolbar-title').textContent = book.title;
+  document.getElementById('total-pages').textContent = book.totalPages;
+  showLoading(true);
+  await workerReady;
+  try {
+    const arrayBuffer = await loadPdf(bookId);
+    if (!arrayBuffer) {
+      showLoading(false);
+      showToast('PDFが見つかりません。再度アップロードしてください。');
+      document.getElementById('home-screen').style.display = 'flex';
+      document.getElementById('viewer-screen').classList.remove('active');
+      return;
+    }
+    viewer.pdfDoc = await pdfjsLib.getDocument({ data: arrayBuffer.slice(0) }).promise;
+    await renderPage(viewer.currentPage);
+  } catch(err) {
+    showToast('PDFの表示に失敗しました');
+    console.error(err);
+  }
+  showLoading(false);
+  showZoomControls();
+}
+function closeViewer() {
+  document.getElementById('home-screen').style.display = 'flex';
+  document.getElementById('viewer-screen').classList.remove('active');
+  renderBookList();
+  viewer.pdfDoc = null; viewer.bookId = null;
+}
+function showLoading(v) {
+  document.getElementById('loading-overlay').style.display = v ? 'flex' : 'none';
+}
+
+async function renderPage(pageIdx) {
+  if (!viewer.pdfDoc) return;
+  const book = state.books.find(b => b.id === viewer.bookId);
+  if (!book) return;
+  const pageNum = pageIdx + 1;
+  if (pageNum < 1 || pageNum > viewer.pdfDoc.numPages) return;
+  showLoading(true);
+  if (viewer.renderTask) { viewer.renderTask.cancel(); viewer.renderTask = null; }
+  const page = await viewer.pdfDoc.getPage(pageNum);
+  const cw = document.getElementById('canvas-container').clientWidth - 24;
+  const vp0 = page.getViewport({ scale: 1 });
+  const scale = (cw / vp0.width) * viewer.zoom;
+  const vp = page.getViewport({ scale });
+  const canvas = document.getElementById('pdf-canvas');
+  const ctx = canvas.getContext('2d');
+  canvas.width  = vp.width;
+  canvas.height = vp.height;
+  viewer.renderTask = page.render({ canvasContext: ctx, viewport: vp });
+  try { await viewer.renderTask.promise; } catch(e) { if (e.name !== 'RenderingCancelledException') console.error(e); }
+  viewer.renderTask = null;
+  viewer.currentPage = pageIdx;
+  book.lastPage = pageIdx;
+  saveState();
+  document.getElementById('page-num-input').value = pageIdx + 1;
+  document.getElementById('page-indicator').textContent = `${pageIdx + 1} / ${book.totalPages}`;
+  document.getElementById('prev-btn').disabled = pageIdx === 0;
+  document.getElementById('next-btn').disabled = pageIdx >= book.totalPages - 1;
+  updateButtons();
+  showLoading(false);
+}
+
+function goPage(delta) { renderPage(viewer.currentPage + delta); }
+
+document.getElementById('page-num-input').addEventListener('change', e => {
+  const book = state.books.find(b => b.id === viewer.bookId);
+  if (!book) return;
+  renderPage(Math.max(0, Math.min(parseInt(e.target.value) - 1, book.totalPages - 1)));
+});
+
+// スワイプ
+let tx = 0, ty = 0;
+document.getElementById('canvas-container').addEventListener('touchstart', e => { tx = e.touches[0].clientX; ty = e.touches[0].clientY; }, { passive: true });
+document.getElementById('canvas-container').addEventListener('touchend', e => {
+  const dx = e.changedTouches[0].clientX - tx;
+  const dy = e.changedTouches[0].clientY - ty;
+  if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 60) { if (dx < 0) goPage(1); else goPage(-1); }
+}, { passive: true });
+document.addEventListener('keydown', e => {
+  if (!viewer.bookId) return;
+  if (e.key === 'ArrowRight' || e.key === 'ArrowDown') goPage(1);
+  else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') goPage(-1);
+});
+
+// ===== ズーム =====
+let zoomHideTimer;
+function showZoomControls() {
+  const z = document.querySelector('.zoom-controls');
+  if (!z) return;
+  z.classList.remove('hidden');
+  clearTimeout(zoomHideTimer);
+  zoomHideTimer = setTimeout(() => z.classList.add('hidden'), 3000);
+}
+document.getElementById('canvas-container').addEventListener('touchstart', showZoomControls, { passive: true });
+document.getElementById('canvas-container').addEventListener('click', showZoomControls);
+function changeZoom(delta) {
+  viewer.zoom = Math.max(0.5, Math.min(4.0, viewer.zoom + delta));
+  document.getElementById('zoom-level').textContent = Math.round(viewer.zoom * 100) + '%';
+  renderPage(viewer.currentPage); showZoomControls();
+}
+function resetZoom() {
+  viewer.zoom = 1.0;
+  document.getElementById('zoom-level').textContent = '100%';
+  renderPage(viewer.currentPage); showZoomControls();
+}
+
+// ===== アクションボタン =====
+function updateButtons() {
+  const rec = getRecord(viewer.bookId, viewer.currentPage);
+
+  const readBtn = document.getElementById('btn-read');
+  readBtn.className = 'action-btn btn-read' + (rec.read ? ' active' : '');
+  document.getElementById('read-icon').textContent = rec.read ? '✔' : '○';
+  document.getElementById('read-lbl').textContent  = rec.read ? '読了済み' : '未読';
+
+  const markerBtn = document.getElementById('btn-marker');
+  markerBtn.className = 'action-btn btn-marker' + (rec.marker ? ' active' : '');
+  document.getElementById('marker-lbl').textContent = rec.marker ? '重要🖊' : 'マーカー';
+
+  const memoBtn = document.getElementById('btn-memo');
+  memoBtn.className = 'action-btn btn-memo' + ((rec.memo && rec.memo.trim()) ? ' has-memo' : '');
+  document.getElementById('memo-lbl').textContent = (rec.memo && rec.memo.trim()) ? 'メモあり' : 'メモ';
+
+  const overlay = document.getElementById('status-overlay');
+  overlay.innerHTML = '';
+  if (rec.read)   overlay.innerHTML += `<div class="status-badge-big read">✔</div>`;
+  if (rec.marker) overlay.innerHTML += `<div class="status-badge-big marker">🖊</div>`;
+}
+
+function toggleRead() {
+  const rec = getRecord(viewer.bookId, viewer.currentPage);
+  setRecord(viewer.bookId, viewer.currentPage, { read: !rec.read });
+  updateButtons();
+  showToast(rec.read ? '未読に戻しました' : '✔ 読了しました');
+}
+function toggleMarker() {
+  const rec = getRecord(viewer.bookId, viewer.currentPage);
+  setRecord(viewer.bookId, viewer.currentPage, { marker: !rec.marker });
+  updateButtons();
+  showToast(rec.marker ? 'マーカーを解除' : '🖊 重要マークしました');
+}
+
+// ===== メモ =====
+function openMemo() {
+  const rec = getRecord(viewer.bookId, viewer.currentPage);
+  document.getElementById('memo-modal-title').textContent = `メモ ― ${viewer.currentPage + 1}ページ`;
+  document.getElementById('memo-textarea').value = rec.memo || '';
+  document.getElementById('memo-modal').classList.add('open');
+  setTimeout(() => document.getElementById('memo-textarea').focus(), 100);
+}
+function closeMemo() { document.getElementById('memo-modal').classList.remove('open'); }
+function saveMemo() {
+  setRecord(viewer.bookId, viewer.currentPage, { memo: document.getElementById('memo-textarea').value });
+  closeMemo(); updateButtons(); showToast('メモを保存しました');
+}
+
+// ===== サイドバー =====
+function openSidebar() {
+  document.getElementById('sidebar-overlay').classList.add('open');
+  document.getElementById('sidebar').classList.add('open');
+  renderSidebar();
+}
+function closeSidebar() {
+  document.getElementById('sidebar-overlay').classList.remove('open');
+  document.getElementById('sidebar').classList.remove('open');
+}
+function switchTab(tab) {
+  sidebarTab = tab;
+  document.querySelectorAll('.sidebar-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tab));
+  renderSidebar();
+}
+function renderSidebar() {
+  const book = state.books.find(b => b.id === viewer.bookId);
+  if (!book) return;
+  const stats = getBookStats(viewer.bookId, book.totalPages);
+  document.getElementById('sidebar-stats').innerHTML = `
+    <div class="stat-box r"><div class="stat-num">${stats.read}</div><div class="stat-lbl">読了</div></div>
+    <div class="stat-box m"><div class="stat-num">${stats.marker}</div><div class="stat-lbl">重要</div></div>
+    <div class="stat-box n"><div class="stat-num">${stats.memo}</div><div class="stat-lbl">メモ</div></div>
+  `;
+  const items = [];
+  for (let i = 0; i < book.totalPages; i++) {
+    const r = state.records[`${viewer.bookId}_${i}`];
+    if (!r) continue;
+    if (sidebarTab === 'marker' && !r.marker) continue;
+    if (sidebarTab === 'memo'   && !(r.memo && r.memo.trim())) continue;
+    if (sidebarTab === 'read'   && !r.read) continue;
+    items.push({ pageIdx: i, rec: r });
+  }
+  const list = document.getElementById('sidebar-list');
+  if (items.length === 0) {
+    const msgs = {
+      marker: '🖊 重要マークしたページがありません\n\nビューワーで「マーカー」ボタンをタップすると\nここに表示されます',
+      memo:   '📝 メモが書かれたページがありません\n\nビューワーで「メモ」ボタンをタップすると\nここに表示されます',
+      read:   '✔ 読了済みのページがありません\n\nビューワーで「読了」ボタンをタップすると\nここに表示されます',
+      all:    'まだ記録がありません'
+    };
+    list.innerHTML = `<div class="sidebar-empty">${msgs[sidebarTab].replace(/\n/g, '<br>')}</div>`;
+    return;
+  }
+  list.innerHTML = items.map(({ pageIdx, rec }) => {
+    const cls = sidebarTab === 'read' ? 'read' : sidebarTab === 'memo' ? 'memo' : 'marker';
+    const icon = sidebarTab === 'read' ? '✔' : sidebarTab === 'memo' ? '📝' : '🖊';
+    const sub = rec.memo && rec.memo.trim() ? escHtml(rec.memo.slice(0, 40)) : `${pageIdx + 1}ページ`;
+    const badges = [rec.read ? '✔' : '', rec.marker ? '🖊' : '', (rec.memo && rec.memo.trim()) ? '📝' : ''].filter(Boolean).join(' ');
+    return `
+      <div class="sidebar-item" onclick="jumpTo(${pageIdx})">
+        <div class="sidebar-item-badge ${cls}">${icon}</div>
+        <div class="sidebar-item-info">
+          <div class="sidebar-item-page">${pageIdx + 1}ページ <span style="font-weight:400;font-size:11px;color:var(--muted)">${badges}</span></div>
+          <div class="sidebar-item-sub">${sub}</div>
+        </div>
+        <div class="sidebar-item-arr">›</div>
+      </div>`;
+  }).join('');
+}
+function jumpTo(pageIdx) { closeSidebar(); renderPage(pageIdx); }
+
+// ===== トースト =====
+let toastTimer;
+function showToast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg; el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), 2000);
+}
+
+function escHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ===== 初期化 =====
+loadState();
+renderBookList();
+</script>
+</body>
+</html>
